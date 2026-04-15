@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🧪 Resorte Rebelde - Juego de Cartas</title>
+<style>
+    body{
+        margin:0;
+        background:linear-gradient(#0a0b14, #1a1f2e);
+        color:#e2e8f0;
+        font-family:'Segoe UI',sans-serif;
+        overflow:hidden;
+        position:relative;
+    }
+    body::before{
+        content:"";
+        position:absolute;
+        top:0; left:0; right:0; bottom:0;
+        background:repeating-linear-gradient(45deg, transparent, transparent 40px, rgba(134,239,172,0.03) 40px, rgba(134,239,172,0.03) 80px);
+        pointer-events:none;
+        z-index:-1;
+    }
+    .header{
+        position:fixed;
+        top:0; left:0; right:0;
+        background:rgba(10,11,20,0.95);
+        padding:12px 20px;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        z-index:100;
+        border-bottom:3px solid #86efac;
+        box-shadow:0 4px 20px rgba(134,239,172,0.3);
+    }
+    .header-left{
+        display:flex;
+        align-items:center;
+        gap:12px;
+    }
+    .mascot{
+        font-size:28px;
+        animation:bounce 1.5s infinite alternate;
+    }
+    .title{
+        font-size:22px;
+        font-weight:bold;
+        color:#86efac;
+    }
+    .subtitle{
+        font-size:15px;
+        color:#a3f7c2;
+        margin-top:2px;
+    }
+    button{
+        padding:10px 20px;
+        background:#86efac;
+        color:#0a0b14;
+        border:none;
+        border-radius:50px;
+        font-weight:bold;
+        cursor:pointer;
+        transition:0.3s;
+        box-shadow:0 4px 15px rgba(134,239,172,0.4);
+    }
+    button:hover{
+        transform:scale(1.08) rotate(3deg);
+        background:#a3f7c2;
+    }
+    .mute-btn{
+        background:#334155;
+        color:#86efac;
+        padding:8px 14px;
+        border-radius:50px;
+        font-size:22px;
+    }
+
+    .game-container{
+        margin:85px auto 30px;
+        padding:20px;
+        max-width:620px;
+    }
+    .info-bar{
+        text-align:center;
+        margin-bottom:15px;
+        font-size:18px;
+        background:rgba(255,255,255,0.08);
+        padding:8px 20px;
+        border-radius:50px;
+        display:inline-flex;
+        gap:30px;
+    }
+    .grid{
+        display:grid;
+        grid-template-columns:repeat(4,1fr);
+        gap:14px;
+        margin:auto;
+        max-width:540px;
+    }
+    
+    /* --- CARTAS CON 3D CORREGIDO --- */
+    .card {
+        cursor: pointer;
+        width: 100%;
+        padding-top: 100%;
+        position: relative;
+        perspective: 1000px;
+    }
+    .card.flipped .card-inner,
+    .card.matched .card-inner {
+        transform: rotateY(180deg);
+    }
+    .card-inner {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        transform-style: preserve-3d;
+        border-radius: 18px;
+        box-shadow: 0 10px 25px rgba(134,239,172,0.4);
+    }
+    .front, .back {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        border-radius: 18px;
+        backface-visibility: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        border: 5px solid #86efac;
+        box-sizing: border-box;
+    }
+    .front {
+        background: linear-gradient(135deg, #1e2937, #334155);
+        padding: 18px;
+        font-size: 15px;
+        transform: rotateY(180deg); 
+    }
+    .back {
+        background: #86efac;
+        color: #0a0b14;
+        font-size: 42px;
+        font-weight: bold;
+        transform: rotateY(0deg);
+    }
+    /* ------------------------------- */
+
+    .modal{
+        display:none;
+        position:fixed;
+        top:0; left:0; width:100%; height:100%;
+        background:rgba(0,0,0,0.85);
+        z-index:200;
+        align-items:center;
+        justify-content:center;
+    }
+    .modal-content{
+        background:#1e2937;
+        width:90%;
+        max-width:680px;
+        padding:30px;
+        border-radius:25px;
+        border:5px solid #86efac;
+        box-shadow:0 0 40px rgba(134,239,172,0.6);
+    }
+    @keyframes bounce{
+        from{transform:translateY(0)}
+        to{transform:translateY(-8px)}
+    }
+</style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-left">
+        <div class="mascot">🧪</div>
+        <div>
+            <div class="title">Resorte Rebelde - Juego de Cartas</div>
+            <div class="subtitle">Une la pregunta con la respuesta correcta • ¡Aprende mientras juegas!</div>
+        </div>
+    </div>
+    
+    <div style="display:flex; gap:8px; align-items:center;">
+        <button onclick="toggleMute()" id="muteBtn" class="mute-btn">🔊</button>
+        <button onclick="showModal('teoria')">Teoría + Ecuación Diferencial</button>
+        <button onclick="restartGame()">Nuevo Juego</button>
+    </div>
+</div>
+
+<div class="game-container">
+    <div class="info-bar">
+        <div>Intentos: <span id="attempts" style="color:#86efac">0</span></div>
+        <div>Tiempo: <span id="timer" style="color:#86efac">0</span>s</div>
+        <div>Parejas: <span id="pairs" style="color:#86efac">0 / 8</span></div>
+    </div>
+    
+    <div class="grid" id="grid"></div>
+</div>
+
+<div id="modal" class="modal" onclick="if(event.target===this)hideModal()">
+    <div class="modal-content" id="modalContent"></div>
+</div>
+
+<script>
+// ====================== SONIDOS (Web Audio API) ======================
+let audioContext;
+let isMuted = false;
+
+function initAudio() {
+    if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function playSound(type) {
+    if (isMuted || !audioContext) return;
+    
+    const now = audioContext.currentTime;
+    
+    if (type === "flip") {
+        const osc = audioContext.createOscillator();
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.exponentialRampToValueAtTime(200, now + 0.08);
+        const gain = audioContext.createGain();
+        gain.gain.value = 0.3;
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        osc.connect(gain).connect(audioContext.destination);
+        osc.start(now);
+        osc.stop(now + 0.2);
+    }
+    
+    else if (type === "match") {
+        const notes = [800, 1000, 1200];
+        notes.forEach((freq, i) => {
+            const osc = audioContext.createOscillator();
+            osc.frequency.setValueAtTime(freq, now + i*0.05);
+            const gain = audioContext.createGain();
+            gain.gain.value = 0.4;
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i*0.05 + 0.4);
+            osc.connect(gain).connect(audioContext.destination);
+            osc.start(now + i*0.05);
+            osc.stop(now + i*0.05 + 0.5);
+        });
+    }
+    
+    else if (type === "miss") {
+        const osc = audioContext.createOscillator();
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.exponentialRampToValueAtTime(150, now + 0.3);
+        const gain = audioContext.createGain();
+        gain.gain.value = 0.5;
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        osc.connect(gain).connect(audioContext.destination);
+        osc.start(now);
+        osc.stop(now + 0.4);
+    }
+    
+    else if (type === "win") {
+        const notes = [600, 800, 1000, 1300, 1600];
+        notes.forEach((freq, i) => {
+            const osc = audioContext.createOscillator();
+            osc.frequency.setValueAtTime(freq, now + i*0.08);
+            const gain = audioContext.createGain();
+            gain.gain.value = 0.5;
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i*0.08 + 0.8);
+            osc.connect(gain).connect(audioContext.destination);
+            osc.start(now + i*0.08);
+            osc.stop(now + i*0.08 + 1);
+        });
+    }
+}
+
+function toggleMute() {
+    isMuted = !isMuted;
+    document.getElementById("muteBtn").textContent = isMuted ? "🔇" : "🔊";
+}
+
+// ====================== JUEGO ======================
+const cardsData = [
+    {id:1, type:"question", text:"¿Qué dice la Ley de Hooke?"},
+    {id:1, type:"answer",   text:"F = −k·x<br><small>Fuerza restauradora</small>"},
+    
+    {id:2, type:"question", text:"Ecuación diferencial completa"},
+    {id:2, type:"answer",   text:"m·x″ + b·x′ + k·x = 0"},
+    
+    {id:3, type:"question", text:"¿Qué es la constante k?"},
+    {id:3, type:"answer",   text:"Rigidez del resorte"},
+    
+    {id:4, type:"question", text:"¿Qué representa b?"},
+    {id:4, type:"answer",   text:"Amortiguamiento (fricción)"},
+    
+    {id:5, type:"question", text:"Ejemplo real del resorte"},
+    {id:5, type:"answer",   text:"Suspensión del auto o trampolín"},
+    
+    {id:6, type:"question", text:"¿Qué pasa si b = 0?"},
+    {id:6, type:"answer",   text:"Movimiento armónico simple"},
+    
+    {id:7, type:"question", text:"Fuerza que siempre vuelve al centro"},
+    {id:7, type:"answer",   text:"Fuerza restauradora"},
+    
+    {id:8, type:"question", text:"Solución del movimiento"},
+    {id:8, type:"answer",   text:"x(t) = A·e^(−γt)·cos(ωt + φ)"}
+];
+
+let cards = [], flippedCards = [], matchedPairs = 0, attempts = 0, seconds = 0, timerInterval;
+
+function shuffle(a){ return a.sort(()=>Math.random()-0.5); }
+
+function createCards(){
+    cards = shuffle([...cardsData]);
+    const grid = document.getElementById("grid");
+    grid.innerHTML = "";
+    cards.forEach((card, i) => {
+        const el = document.createElement("div");
+        el.className = "card";
+        el.dataset.id = card.id;
+        el.dataset.type = card.type;
+        el.innerHTML = `
+            <div class="card-inner">
+                <div class="front">${card.text}</div>
+                <div class="back">?</div>
+            </div>
+        `;
+        el.addEventListener("click", () => flipCard(el, i));
+        grid.appendChild(el);
+    });
+}
+
+function flipCard(cardElement, index){
+    initAudio(); 
+    
+    if(flippedCards.length === 2 || cardElement.classList.contains("flipped") || cardElement.classList.contains("matched")) return;
+    
+    playSound("flip");
+    cardElement.classList.add("flipped");
+    flippedCards.push({element:cardElement, index});
+    
+    if(flippedCards.length === 2){
+        attempts++;
+        document.getElementById("attempts").textContent = attempts;
+        
+        const [first, second] = flippedCards;
+        
+        if(cards[first.index].id === cards[second.index].id && first.element.dataset.type !== second.element.dataset.type){
+            playSound("match");
+            first.element.classList.add("matched");
+            second.element.classList.add("matched");
+            matchedPairs++;
+            document.getElementById("pairs").textContent = `${matchedPairs} / 8`;
+            
+            createSpringParticles(first.element.offsetLeft + 60, first.element.offsetTop + 80);
+            
+            if(matchedPairs === 8) setTimeout(winGame, 600);
+            else setTimeout(() => showMatchExplanation(), 500);
+        } else {
+            playSound("miss");
+            setTimeout(() => {
+                first.element.classList.remove("flipped");
+                second.element.classList.remove("flipped");
+            }, 1100);
+        }
+        flippedCards = [];
+    }
+}
+
+function createSpringParticles(x, y){
+    for(let i=0; i<18; i++){
+        const p = document.createElement("div");
+        p.style.position = "fixed";
+        p.style.left = x + "px";
+        p.style.top = y + "px";
+        p.style.fontSize = "20px";
+        p.style.zIndex = "999";
+        p.textContent = "🌀";
+        document.body.appendChild(p);
+        const angle = Math.random()*360;
+        const dist = 60 + Math.random()*80;
+        p.style.transition = "all 1.2s cubic-bezier(0.68, -0.55, 0.27, 1.55)";
+        p.style.transform = `translate(${Math.cos(angle)*dist}px, ${Math.sin(angle)*dist-80}px) rotate(${angle}deg)`;
+        setTimeout(() => p.remove(), 1200);
+    }
+}
+
+function showMatchExplanation(){
+    const modal = document.getElementById("modal");
+    const content = document.getElementById("modalContent");
+    content.innerHTML = `
+        <h2 style="color:#86efac;text-align:center">¡Conexión perfecta! 🧪</h2>
+        <p style="font-size:18px;text-align:center">Esta pareja te ayuda a entender la ecuación diferencial del resorte.</p>
+        <button onclick="hideModal()" style="width:100%;margin-top:20px">¡Siguiente!</button>
+    `;
+    modal.style.display = "flex";
+}
+
+function winGame(){
+    playSound("win");
+    clearInterval(timerInterval);
+    const modal = document.getElementById("modal");
+    const content = document.getElementById("modalContent");
+    content.innerHTML = `
+        <div style="text-align:center">
+            <h1 style="font-size:42px;margin:0;color:#86efac">¡GANASTE! 🎉</h1>
+            <p style="font-size:24px;margin:15px 0">¡Tu masa M ya domina la Ley de Hooke!</p>
+            <p>Intentos: <strong>${attempts}</strong> • Tiempo: <strong>${seconds}</strong>s</p>
+            <button onclick="restartGame()" style="width:100%;margin:15px 0 8px">Jugar de nuevo</button>
+            <button onclick="showModal('teoria')" style="width:100%">Ver Teoría Completa</button>
+        </div>
+    `;
+    modal.style.display = "flex";
+}
+
+function showModal(type){
+    const modal = document.getElementById("modal");
+    const content = document.getElementById("modalContent");
+    if(type === "teoria"){
+        content.innerHTML = `
+            <h2 style="color:#86efac">Ley de Hooke y Ecuación Diferencial</h2>
+            <p><strong>F = −k·x</strong> → Fuerza restauradora</p>
+            <p><strong>Ecuación diferencial:</strong></p>
+            <p style="background:#0a0b14;padding:18px;border-radius:12px;font-family:monospace;font-size:18px">
+                m·x″(t) + b·x′(t) + k·x(t) = 0
+            </p>
+            <button onclick="hideModal()" style="width:100%;margin-top:20px">Volver al juego</button>
+        `;
+    }
+    modal.style.display = "flex";
+}
+
+function hideModal(){
+    document.getElementById("modal").style.display = "none";
+}
+
+function restartGame(){
+    hideModal();
+    matchedPairs = 0; attempts = 0; seconds = 0;
+    document.getElementById("attempts").textContent = "0";
+    document.getElementById("pairs").textContent = "0 / 8";
+    document.getElementById("timer").textContent = "0";
+    createCards();
+    clearInterval(timerInterval);
+    timerInterval = setInterval(()=>{seconds++; document.getElementById("timer").textContent = seconds;},1000);
+}
+
+// ====================== INICIO ======================
+createCards();
+timerInterval = setInterval(()=>{seconds++; document.getElementById("timer").textContent = seconds;},1000);
+</script>
+</body>
+</html>
